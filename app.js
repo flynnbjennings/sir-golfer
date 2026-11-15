@@ -1,4 +1,7 @@
 
+const WORKER_URL = 'https://sir-golfer-ai.flynnbjennings.workers.dev/';
+
+// Main elements
 const form = document.getElementById('chatForm');
 const input = document.getElementById('messageInput');
 const messages = document.getElementById('messages');
@@ -14,52 +17,74 @@ const voiceListenBtn = document.getElementById('voiceListenBtn');
 const voiceStatus = document.getElementById('voiceStatus');
 const voiceSelect = document.getElementById('voiceSelect');
 
+// App state
 let conversation = [];
 let voiceMode = false;
 let waitingForReply = false;
 let recognitionActive = false;
+let recognition = null;
 
-// Load available voices
+// ----------------------------------
+// Notifications
+// ----------------------------------
+
+function notify(text) {
+  if (!toast) return;
+
+  toast.textContent = text;
+  toast.classList.add('show');
+
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2600);
+}
+
+// ----------------------------------
+// Voice selection
+// ----------------------------------
+
 function loadVoices() {
-  const voices = window.speechSynthesis.getVoices();
+  if (!window.speechSynthesis || !voiceSelect) return;
 
+  const voices = window.speechSynthesis.getVoices();
   const previousSelection = voiceSelect.value;
+
   voiceSelect.innerHTML = '';
-  const preferredVoice = 'Samantha';
 
   voices
     .filter(voice => voice.lang.startsWith('en'))
     .forEach(voice => {
       const option = document.createElement('option');
+
       option.value = voice.name;
-      option.textContent = voice.name + ' (' + voice.lang + ')';
+      option.textContent = `${voice.name} (${voice.lang})`;
+
       voiceSelect.appendChild(option);
     });
 
- if (previousSelection) {
-  voiceSelect.value = previousSelection;
-} else {
-  const samantha = voices.find(voice =>
-    voice.name.includes('Samantha')
-  );
+  if (previousSelection) {
+    voiceSelect.value = previousSelection;
+  } else {
+    const samantha = voices.find(voice =>
+      voice.name.includes('Samantha')
+    );
 
-  if (samantha) {
-    voiceSelect.value = samantha.name;
+    if (samantha) {
+      voiceSelect.value = samantha.name;
+    }
   }
-}
 }
 
 loadVoices();
-window.speechSynthesis.onvoiceschanged = loadVoices;
 
-// Notifications
-function notify(text) {
-  toast.textContent = text;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2600);
+if (window.speechSynthesis) {
+  window.speechSynthesis.onvoiceschanged = loadVoices;
 }
 
-// Add chat message
+// ----------------------------------
+// Display chat messages
+// ----------------------------------
+
 function addMessage(text, who) {
   const row = document.createElement('div');
   row.className = 'message ' + who;
@@ -74,12 +99,22 @@ function addMessage(text, who) {
 
   row.append(avatar, bubble);
   messages.append(row);
-  row.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+  row.scrollIntoView({
+    behavior: 'smooth',
+    block: 'end'
+  });
+
+  return bubble;
 }
 
-// Send message to Sir Golfer
+// ----------------------------------
+// Connect to Sir Golfer AI
+// ----------------------------------
+
 async function send(text) {
   const clean = text.trim();
+
   if (!clean) return;
 
   welcome.style.display = 'none';
@@ -103,7 +138,9 @@ async function send(text) {
   }
 
   try {
-    const response = await fetch("https://sir-golfer-ai.flynnbjennings.workers.dev/", {
+    console.log('Connecting to Sir Golfer AI...');
+
+    const response = await fetch(WORKER_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -113,32 +150,20 @@ async function send(text) {
       })
     });
 
+    console.log('Worker response status:', response.status);
+
     if (!response.ok) {
-      throw new Error(await response.text() || 'Something went wrong.');
+      const errorText = await response.text();
+
+      throw new Error(
+        `AI Worker error (${response.status}): ${errorText}`
+      );
     }
 
-    let assistantBubble = null;
+    const reply = await response.text();
 
-    if (!voiceMode) {
-      addMessage('', 'assistant');
-      assistantBubble =
-        messages.lastElementChild.querySelector('.bubble');
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let reply = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      reply += chunk;
-
-      if (assistantBubble) {
-        assistantBubble.textContent = reply;
-      }
+    if (!reply.trim()) {
+      throw new Error('The AI Worker returned an empty response.');
     }
 
     conversation.push({
@@ -146,82 +171,96 @@ async function send(text) {
       content: reply
     });
 
-    if (voiceMode) {
+    if (!voiceMode) {
+      addMessage(reply, 'assistant');
+    } else {
       voiceStatus.textContent = 'Speaking...';
+      speak(reply);
     }
 
-    if (voiceMode && reply.trim()) {
-  speak(reply);
-} else if (voiceMode) {
-  waitingForReply = false;
-  voiceStatus.textContent = 'No reply received. Try again.';
-}
+    console.log('Sir Golfer replied successfully.');
 
   } catch (error) {
+    console.error('Sir Golfer connection error:', error);
+
     conversation.pop();
 
     if (voiceMode) {
-      voiceStatus.textContent = 'Connection error';
       waitingForReply = false;
+      voiceStatus.textContent = 'Connection error. Please try again.';
     } else {
       addMessage(
-        'Sorry, I could not connect to my AI brain. Check that Ollama is running.',
+        'Sorry, I could not connect to Sir Golfer AI. Please try again.',
         'assistant'
       );
     }
-
-    console.error(error);
   }
 }
 
+// ----------------------------------
 // Normal text chat
-form.addEventListener('submit', e => {
-  e.preventDefault();
+// ----------------------------------
+
+form.addEventListener('submit', event => {
+  event.preventDefault();
   send(input.value);
 });
 
-input.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
+input.addEventListener('keydown', event => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
     form.requestSubmit();
   }
 });
 
 input.addEventListener('input', () => {
   input.style.height = 'auto';
+
   input.style.height =
     Math.min(input.scrollHeight, 130) + 'px';
 });
 
+// ----------------------------------
 // Suggestion buttons
+// ----------------------------------
+
 document.querySelectorAll('[data-prompt]').forEach(button => {
   button.addEventListener('click', () => {
     send(button.dataset.prompt);
   });
 });
 
+// ----------------------------------
 // New conversation
+// ----------------------------------
+
 document.getElementById('newChat').addEventListener('click', () => {
   messages.innerHTML = '';
   conversation = [];
+
   welcome.style.display = 'block';
   input.focus();
 });
 
+// ----------------------------------
 // Navigation buttons
+// ----------------------------------
+
 document.getElementById('calendarNav').addEventListener('click', () => {
-  notify('Google Calendar connection is a future step.');
+  notify('Google Calendar connection is coming later.');
 });
 
 document.getElementById('tasksNav').addEventListener('click', () => {
   notify('Task management is coming later.');
 });
 
+// ----------------------------------
 // Speech recognition
-const SpeechRecognition =
-  window.SpeechRecognition || window.webkitSpeechRecognition;
+// ----------------------------------
 
-let recognition = null;
+const SpeechRecognition =
+  window.SpeechRecognition ||
+  window.webkitSpeechRecognition;
 
 function startListening() {
   if (!recognition) {
@@ -229,12 +268,12 @@ function startListening() {
     return;
   }
 
-  if (recognitionActive) return;
+  if (recognitionActive || waitingForReply) return;
 
   try {
     recognition.start();
   } catch (error) {
-    console.log('Recognition could not start:', error);
+    console.log('Could not start voice recognition:', error);
   }
 }
 
@@ -247,7 +286,10 @@ if (SpeechRecognition) {
 
   recognition.onstart = () => {
     recognitionActive = true;
-    mic.classList.add('listening');
+
+    if (mic) {
+      mic.classList.add('listening');
+    }
 
     if (voiceMode) {
       voiceStatus.textContent = 'Listening...';
@@ -258,29 +300,32 @@ if (SpeechRecognition) {
 
   recognition.onend = () => {
     recognitionActive = false;
-    mic.classList.remove('listening');
+
+    if (mic) {
+      mic.classList.remove('listening');
+    }
 
     if (voiceMode && !waitingForReply) {
-      startListening();
+      setTimeout(() => {
+        if (voiceMode && !waitingForReply && !recognitionActive) {
+          startListening();
+        }
+      }, 500);
     }
   };
 
-  
-recognition.onend = () => {
-  recognitionActive = false;
-  mic.classList.remove('listening');
+  recognition.onerror = event => {
+    console.error('Speech recognition error:', event.error);
 
-  if (voiceMode && !waitingForReply) {
-    setTimeout(() => {
-      if (voiceMode && !waitingForReply && !recognitionActive) {
-        startListening();
-      }
-    }, 500);
-  }
-};
+    recognitionActive = false;
 
-  recognition.onresult = e => {
-    const transcript = e.results[0][0].transcript;
+    if (voiceMode) {
+      voiceStatus.textContent = 'Microphone error. Please try again.';
+    }
+  };
+
+  recognition.onresult = event => {
+    const transcript = event.results[0][0].transcript;
 
     if (voiceMode) {
       waitingForReply = true;
@@ -292,44 +337,61 @@ recognition.onend = () => {
   };
 
 } else {
-  mic.addEventListener('click', () => {
-    notify('Voice input is not supported in this browser.');
-  });
+  if (mic) {
+    mic.addEventListener('click', () => {
+      notify('Voice recognition is not supported in this browser.');
+    });
+  }
 }
 
+// ----------------------------------
 // Normal microphone button
+// ----------------------------------
+
 mic.addEventListener('click', () => {
   if (!voiceMode) {
     startListening();
   }
 });
 
+// ----------------------------------
 // Open voice mode
+// ----------------------------------
+
 voiceModeBtn.addEventListener('click', () => {
   voiceMode = true;
   waitingForReply = false;
 
   voiceScreen.classList.add('active');
+
   startListening();
 });
 
+// ----------------------------------
 // Exit voice mode
+// ----------------------------------
+
 voiceExit.addEventListener('click', () => {
   voiceMode = false;
   waitingForReply = false;
 
   voiceScreen.classList.remove('active');
 
-  window.speechSynthesis.cancel();
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
 
   if (recognition && recognitionActive) {
     recognition.stop();
   }
 });
 
+// ----------------------------------
 // Voice screen microphone
+// ----------------------------------
+
 voiceListenBtn.addEventListener('click', () => {
-  if (window.speechSynthesis.speaking) {
+  if (window.speechSynthesis) {
     window.speechSynthesis.cancel();
   }
 
@@ -337,12 +399,14 @@ voiceListenBtn.addEventListener('click', () => {
   startListening();
 });
 
-// Spoken replies using selected voice
+// ----------------------------------
+// Speak AI replies
+// ----------------------------------
+
 function speak(text) {
-  if (!('speechSynthesis' in window)) {
-    if (voiceMode) {
-      voiceStatus.textContent = 'Speech is unavailable';
-    }
+  if (!window.speechSynthesis) {
+    voiceStatus.textContent = 'Speech is unavailable.';
+    waitingForReply = false;
     return;
   }
 
@@ -368,16 +432,21 @@ function speak(text) {
     if (voiceMode) {
       waitingForReply = false;
       voiceStatus.textContent = 'Ready when you are';
+
       startListening();
     }
   };
 
-  message.onerror = () => {
+  message.onerror = event => {
+    console.error('Speech output error:', event.error);
+
     if (voiceMode) {
-      voiceStatus.textContent = 'Tap the microphone to try again';
       waitingForReply = false;
+      voiceStatus.textContent = 'Tap the microphone to try again.';
     }
   };
 
   window.speechSynthesis.speak(message);
 }
+
+console.log('Sir Golfer app loaded successfully.');
