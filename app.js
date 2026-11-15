@@ -150,8 +150,11 @@ async function send(text) {
       voiceStatus.textContent = 'Speaking...';
     }
 
-    if (voiceMode) {
+    if (voiceMode && reply.trim()) {
   speak(reply);
+} else if (voiceMode) {
+  waitingForReply = false;
+  voiceStatus.textContent = 'No reply received. Try again.';
 }
 
   } catch (error) {
@@ -262,16 +265,19 @@ if (SpeechRecognition) {
     }
   };
 
-  recognition.onerror = () => {
-    recognitionActive = false;
-    mic.classList.remove('listening');
+  
+recognition.onend = () => {
+  recognitionActive = false;
+  mic.classList.remove('listening');
 
-    if (voiceMode) {
-      voiceStatus.textContent = 'Tap the microphone to try again';
-    } else {
-      notify('Voice input is unavailable.');
-    }
-  };
+  if (voiceMode && !waitingForReply) {
+    setTimeout(() => {
+      if (voiceMode && !waitingForReply && !recognitionActive) {
+        startListening();
+      }
+    }, 500);
+  }
+};
 
   recognition.onresult = e => {
     const transcript = e.results[0][0].transcript;
