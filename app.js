@@ -103,7 +103,7 @@ async function send(text) {
   }
 
   try {
-    const response = await fetch('/chat', {
+    const response = await fetch("https://sir-golfer-ai.flynnbjennings.workers.dev/", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
