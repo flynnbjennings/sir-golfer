@@ -1,0 +1,237 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#101923" />
+
+  <title>Sir Golfer — Personal AI</title>
+
+  <!-- Sir Golfer browser tab icon -->
+  <link rel="icon" type="image/png" href="sir-golfer-icon.png" />
+
+  <!-- App files -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <main class="shell">
+
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">SG</div>
+        <div>
+          <strong>SIR GOLFER</strong>
+          <small>PERSONAL INTELLIGENCE</small>
+        </div>
+      </div>
+
+      <button class="new-chat" id="newChat">
+        ＋ New conversation
+      </button>
+
+      <div class="side-label">WORKSPACE</div>
+
+      <button class="nav-item active">
+        ◉ <span>Assistant</span>
+      </button>
+
+      <button class="nav-item" id="tasksNav">
+        ▤ <span>Tasks</span>
+        <em>Coming soon</em>
+      </button>
+
+      <button class="nav-item" id="calendarNav">
+        ▦ <span>Calendar</span>
+        <em>Connect next</em>
+      </button>
+
+      <div class="sidebar-bottom">
+        <div class="status-dot"></div>
+        <span>Prototype running locally</span>
+      </div>
+    </aside>
+
+    <section class="main">
+
+      <header class="topbar">
+        <div class="mobile-brand">
+          SIR GOLFER <span>·</span> AI
+        </div>
+
+        <div class="top-status">
+          <span class="status-dot"></span>
+          SYSTEM ONLINE
+        </div>
+
+        <button class="avatar" title="Profile">SG</button>
+      </header>
+
+      <div class="content" id="content">
+
+        <div class="welcome" id="welcome">
+
+          <div class="orb-wrap">
+            <div class="orb">
+              <div class="orb-core"></div>
+              <span class="orbit orbit-one"></span>
+              <span class="orbit orbit-two"></span>
+            </div>
+          </div>
+
+          <div class="eyebrow">
+            YOUR PERSONAL ASSISTANT
+          </div>
+
+          <h1>
+            Good morning.<br />
+            <span>What can I help with?</span>
+          </h1>
+
+          <p class="intro">
+            I'm Sir Golfer. Ask me a question, plan your day,
+            or talk through an idea.
+          </p>
+
+          <div class="suggestions">
+
+            <button class="suggestion"
+              data-prompt="Help me plan my day.">
+              <b>◷</b>
+              <span>
+                <strong>Plan my day</strong>
+                <small>Organise what's ahead</small>
+              </span>
+              <i>↗</i>
+            </button>
+
+            <button class="suggestion"
+              data-prompt="Help me organise my projects.">
+              <b>⌘</b>
+              <span>
+                <strong>Organise a project</strong>
+                <small>Turn an idea into a plan</small>
+              </span>
+              <i>↗</i>
+            </button>
+
+            <button class="suggestion"
+              data-prompt="What can you help me do?">
+              <b>✳</b>
+              <span>
+                <strong>Explore capabilities</strong>
+                <small>See what I can help with</small>
+              </span>
+              <i>↗</i>
+            </button>
+
+          </div>
+        </div>
+
+        <div class="messages" id="messages" aria-live="polite"></div>
+
+      </div>
+
+      <footer class="composer-wrap">
+
+        <form class="composer" id="chatForm">
+
+          <textarea
+            id="messageInput"
+            rows="1"
+            placeholder="Message Sir Golfer..."
+            aria-label="Message Sir Golfer">
+          </textarea>
+
+          <div class="composer-actions">
+
+            <div class="composer-hint">
+              <span>↵</span> to send
+            </div>
+
+            <button
+              class="mic-btn"
+              id="micBtn"
+              type="button"
+              title="Speak to Sir Golfer"
+              aria-label="Speak">
+              ⌁
+            </button>
+
+            <button
+              class="mic-btn"
+              id="voiceModeBtn"
+              type="button"
+              title="Voice mode"
+              aria-label="Voice mode">
+              ♫
+            </button>
+
+            <button
+              class="send-btn"
+              type="submit"
+              aria-label="Send message">
+              ↑
+            </button>
+
+          </div>
+        </form>
+
+        <div class="disclaimer">
+          Early prototype · Responses are generated locally.
+        </div>
+
+      </footer>
+
+    </section>
+  </main>
+
+  <!-- VOICE MODE -->
+  <div class="voice-screen" id="voiceScreen">
+
+    <button class="voice-exit" id="voiceExit">
+      ✕
+    </button>
+
+    <div class="voice-content">
+
+      <div class="voice-orb" id="voiceOrb">
+        <div class="voice-orb-inner"></div>
+      </div>
+
+      <h2>Sir Golfer</h2>
+
+      <p id="voiceStatus">Ready when you are</p>
+
+      <select
+        id="voiceSelect"
+        class="voice-select"
+        aria-label="Choose voice">
+      </select>
+
+    </div>
+
+    <div class="voice-controls">
+
+      <button
+        id="voiceListenBtn"
+        class="voice-listen">
+        ⌁
+      </button>
+
+      <span>Tap to speak</span>
+
+    </div>
+
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  <div class="toast" id="toast"></div>
+
+  <!-- JAVASCRIPT -->
+  <script src="app.js"></script>
+
+</body>
+</html>
